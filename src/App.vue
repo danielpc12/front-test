@@ -331,31 +331,65 @@ export default {
 
       const updateValues = (id) => {
          const input = editor.value.getNodeFromId(id);
+         
          const {
             outputs: {
                output_1: {connections},
             },
          } = input;
+            console.log("input")
+            console.log(input.class)
          if (connections.length == 1 && input.class == "Number") {
             const {node, output} = connections[0];
             const expression = editor.value.getNodeFromId(node);
-            console.log(input)
+            console.log("input")
+            console.log(input) //Saca el nodo que le entra
+            console.log("actual")
+            console.log(expression.class) //Saca el nodo que le entra
+            
+            if(expression.class == "Add"|| expression.class == "Sub"|| expression.class == "Multiply"|| expression.class == "Divide"){
+               if (output == "input_1") {
+                  const result = evaluateExpressions(expression.class, parseInt(input.data.number), parseInt(expression.data.Number2));
+                  const object = {Number1: parseInt(input.data.number), Number2: parseInt(expression.data.Number2), Result: result};
+                  editor.value.updateNodeDataFromId(node, object);
+                  dispatch("setOperationAction", {id: node, value: object});
 
-            console.log(expression)
-            if (output == "input_1") {
-               const result = evaluateExpressions(expression.class, parseInt(input.data.number), parseInt(expression.data.Number2));
-               const object = {Number1: parseInt(input.data.number), Number2: parseInt(expression.data.Number2), Result: result};
+                  updateNodes(node);
+               } else if (output == "input_2") {
+                  const result = evaluateExpressions(expression.class, parseInt(expression.data.Number1), parseInt(input.data.number));
+                  const object = {Number1: parseInt(expression.data.Number1), Number2: parseInt(input.data.number), Result: result};
+                  editor.value.updateNodeDataFromId(node, object);
+                  dispatch("setOperationAction", {id: node, value: object});
+                  updateNodes(node);
+               }
+            } else if (expression.class == "Assignation"){
+               const object = {Name: expression.data.Name, Value: parseInt(input.data.number)};
                editor.value.updateNodeDataFromId(node, object);
-               dispatch("setOperationAction", {id: node, value: object});
-
-               updateNodes(node);
-            } else if (output == "input_2") {
-               const result = evaluateExpressions(expression.class, parseInt(expression.data.Number1), parseInt(input.data.number));
-               const object = {Number1: parseInt(expression.data.Number1), Number2: parseInt(input.data.number), Result: result};
-               editor.value.updateNodeDataFromId(node, object);
-               dispatch("setOperationAction", {id: node, value: object});
-               updateNodes(node);
+               
+               if (expression.outputs.output_1.connections.length > 0){
+                  console.log("if length")
+                  const assignOutput = expression.outputs.output_1.connections[0].output
+                  const inputOperation = editor.value.getNodeFromId(expression.outputs.output_1.connections[0].node);
+                  const operationId = inputOperation.id;
+                  if (assignOutput == "input_1") {
+                     const inputValue1 = editor.value.getNodeFromId(inputOperation.inputs.input_1.connections[0].node)
+                     const result = evaluateExpressions(inputOperation.class, parseInt(inputValue1.data.Value), parseInt(inputOperation.data.Number2));
+                     const object = {Number1: parseInt(inputValue1.data.Value), Number2: parseInt(inputOperation.data.Number2), Result: result};
+                     editor.value.updateNodeDataFromId(operationId, object);
+                     dispatch("setOperationAction", {id: operationId, value: object});
+                     updateNodes(operationId);
+                  } else if (assignOutput == "input_2") {
+                     const inputValue2 = editor.value.getNodeFromId(inputOperation.inputs.input_2.connections[0].node)
+                     const result = evaluateExpressions(inputOperation.class, parseInt(inputOperation.data.Number1), parseInt(inputValue2.data.Value));
+                     const object = {Number1: parseInt(inputOperation.data.Number1), Number2: parseInt(inputValue2.data.Value), Result: result};
+                     editor.value.updateNodeDataFromId(operationId, object);
+                     dispatch("setOperationAction", {id: operationId, value: object});
+                     updateNodes(operationId);
+                  }
+               }
+               
             }
+
          }
       };
 
@@ -372,23 +406,17 @@ export default {
                const {node, output} = connections[0];
                const expression = editor.value.getNodeFromId(node);
                   if(expression.class == "Assignation"){
-                     console.log("popa")
-                     console.log(to.data)
                    editor.value.updateNodeDataFromId(expression.id,{Value: to.data.Result, Name: expression.data.Name});
                    break;
                   }
 
                if (output == "input_1") {
-                  console.log("popa2")
-                     console.log(to.data)
                   const result = evaluateExpressions(expression.class, parseInt(to.data.Result), parseInt(expression.data.Number2));
                   const object = {Number1: parseInt(to.data.Result), Number2: parseInt(expression.data.Number2), Result: result};
                   editor.value.updateNodeDataFromId(node, object);
                   dispatch("setOperationAction", {id: node, value: object});
                   actualizar = node;
                } else if (output == "input_2") {
-                  console.log("popa3")
-                     console.log(to.data)
                   const result = evaluateExpressions(expression.class, parseInt(expression.data.Number1), parseInt(to.data.Result));
                   const object = {Number1: parseInt(expression.data.Number1), Number2: parseInt(to.data.Result), Result: result};
                   editor.value.updateNodeDataFromId(node, object);
